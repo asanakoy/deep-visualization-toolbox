@@ -5,8 +5,9 @@
 
 
 
+import os.path
 # Set this to point to your compiled checkout of caffe
-caffevis_caffe_root      = '/path/to/caffe'
+caffevis_caffe_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'caffe')
 
 # Load model: caffenet-yos
 # Path to caffe deploy prototxt file. Minibatch size should be 1.

@@ -57,13 +57,13 @@ def cv2_read_file_rgb(filename):
     im = cv2.imread(filename)
     if len(im.shape) == 2:
         # Upconvert single channel grayscale to color
-        im = im[:,:,np.newaxis]
+        im = im[:, :, np.newaxis]
     if im.shape[2] == 1:
-        im = np.tile(im, (1,1,3))
+        im = np.tile(im, (1, 1, 3))
     if im.shape[2] > 3:
         # Chop off transparency
-        im = im[:,:,:3]
-    im = im[:,:,::-1]   # Convert native OpenCV BGR -> RGB
+        im = im[:, :, :3]
+    im = im[:, :, ::-1]   # Convert native OpenCV BGR -> RGB
     return im
 
     

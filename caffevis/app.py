@@ -64,6 +64,12 @@ class CaffeVisApp(BaseApp):
                 print '$ cd models/caffenet-yos/'
                 print '$ ./fetch.sh\n\n'
                 raise
+            if settings.caffevis_should_preproc_mean:
+                assert self._data_mean.shape[2] == 3, '3-rd dimensions must be color channels!'
+                self._data_mean = self._data_mean[:, :, ::-1]  # change RGB to BGR
+                self._data_mean = self._data_mean.transpose(
+                    (2, 0, 1))  # height*width*channel -> channel*height*width
+
             input_shape = self.net.blobs[self.net.inputs[0]].data.shape[-2:]   # e.g. 227x227
             # Crop center region (e.g. 227x227) if mean is larger (e.g. 256x256)
             excess_h = self._data_mean.shape[1] - input_shape[0]
@@ -71,6 +77,7 @@ class CaffeVisApp(BaseApp):
             assert excess_h >= 0 and excess_w >= 0, 'mean should be at least as large as %s' % repr(input_shape)
             self._data_mean = self._data_mean[:, (excess_h/2):(excess_h/2+input_shape[0]),
                                               (excess_w/2):(excess_w/2+input_shape[1])]
+
         elif settings.caffevis_data_mean is None:
             self._data_mean = None
         else:

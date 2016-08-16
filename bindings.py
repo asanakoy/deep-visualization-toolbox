@@ -72,11 +72,11 @@ _.add('stretch_mode', '0',
        'Toggle between cropping and stretching static files to be square')
 _.add('debug_level', '5',
        'Cycle debug level between 0 (quiet), 1 (some timing info) and 2 (all timing info)')
-_.add('quit', 'q',
+_.add('quit', 'esc',
        'Quit')
 
 # Caffevis
-_.add_multikey('reset_state', ['esc'],
+_.add_multikey('reset_state', ['q'],
        'Reset: turn off backprop, reset to layer 0, unit 0, default boost.')
 _.add_multikey('sel_left', ['left', 'j'],
        '')

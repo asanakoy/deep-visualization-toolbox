@@ -1,5 +1,7 @@
 import time
 import cv2
+from PIL import Image
+import numpy as np
 
 from codependent_thread import CodependentThread
 from misc import WithTimer
@@ -80,7 +82,9 @@ class CaffeProcThread(CodependentThread):
             if run_fwd:
                 #print 'TIMING:, processing frame'
                 self.frames_processed_fwd += 1
-                im_small = cv2.resize(frame, self.input_dims)
+                # im_small = cv2.resize(frame, self.input_dims)
+                # Resize using PIL to be consistent with training images resizing
+                im_small = np.asarray(Image.fromarray(frame).resize(self.input_dims, Image.ANTIALIAS))
                 with WithTimer('CaffeProcThread:forward', quiet = self.debug_level < 1):
                     net_preproc_forward(self.net, im_small, self.input_dims)
 

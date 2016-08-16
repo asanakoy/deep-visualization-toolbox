@@ -78,9 +78,10 @@ class JPGVisLoadingThread(CodependentThread):
                                     state_layer,
                                     '%s_%04d.jpg' % (state_layer, state_selected_unit))
             try:
-                img = caffe_load_image(jpg_path, color = True)
+                img = caffe_load_image(jpg_path, color=True)
                 images[1] = ensure_uint255_and_resize_to_fit(img, resize_shape)
             except IOError:
+                print '\nAttempted to load file %s but failed.' % (jpg_path)
                 pass                
 
             # 2. e.g. max_deconv/conv1/conv1_0037.jpg
@@ -99,12 +100,12 @@ class JPGVisLoadingThread(CodependentThread):
             
             # Stack together
             if len(images) > 0:
-                #print 'Stacking:', [im.shape for im in images]
+                print 'Stacking:', [im.shape for im in images]
                 stack_axis = 0 if self.settings.caffevis_jpgvis_stack_vert else 1
                 img_stacked = np.concatenate(images, axis = stack_axis)
-                #print 'Stacked:', img_stacked.shape
+                print 'Stacked:', img_stacked.shape
                 img_resize = ensure_uint255_and_resize_to_fit(img_stacked, data_shape)
-                #print 'Resized:', img_resize.shape
+                print 'Resized:', img_resize.shape
             else:
                 img_resize = np.zeros(shape=(0,))   # Sentinal value when image is not found.
                 

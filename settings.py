@@ -163,6 +163,9 @@ caffevis_mode_gpu = locals().get('caffevis_mode_gpu', True)
 # channel or None.
 caffevis_data_mean = locals().get('caffevis_data_mean', None)
 
+# should we convert mean file from RGB to BGR and transpose dimensions HxWxC into CxHxW
+caffevis_should_preproc_mean = locals().get('caffevis_should_preproc_mean', False)
+
 # Path to file listing labels in order, one per line, used for the
 # below two features. None to disable.
 caffevis_labels = locals().get('caffevis_labels', None)

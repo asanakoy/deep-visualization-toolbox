@@ -75,7 +75,7 @@ def get_parser():
                         help = 'Number of iterations of the optimization loop.')
 
     # Where to save results
-    parser.add_argument('--output-prefix', type = str, default = 'optimize_results/opt',
+    parser.add_argument('--output-prefix', type = str, default = 'optimize_results/regularized_opt/opt',
                         help = 'Output path and filename prefix (default: optimize_results/opt)')
     parser.add_argument('--output-template', type = str, default = '%(p.push_layer)s_%(p.push_channel)04d_%(p.rand_seed)d',
                         help = 'Output filename template; see code for details (default: "%%(p.push_layer)s_%%(p.push_channel)04d_%%(p.rand_seed)d"). '
@@ -158,6 +158,11 @@ def main():
             print '  $ cp ./fetch.sh\n\n'
             print 'Or to use your own mean, change caffevis_data_mean in settings_local.py or override by running with `--mean MEAN_FILE` (see --help).\n'
             raise
+        if settings.caffevis_should_preproc_mean:
+            assert data_mean.shape[2] == 3, '3-rd dimensions must be color channels!'
+            data_mean = data_mean[:, :, ::-1]  # change RGB to BGR
+            data_mean = data_mean.transpose((2, 0, 1))  # height*width*channel -> channel*height*width
+
         # Crop center region (e.g. 227x227) if mean is larger (e.g. 256x256)
         excess_h = data_mean.shape[1] - data_size[0]
         excess_w = data_mean.shape[2] - data_size[1]

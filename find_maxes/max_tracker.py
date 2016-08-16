@@ -13,7 +13,7 @@ import numpy as np
 
 
 
-default_layers  = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'fc6', 'fc7', 'fc8', 'prob']
+default_layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'fc6', 'fc7', 'fc8', 'prob']
 default_is_conv = [('conv' in ll) for ll in default_layers]
 
 def hardcoded_get():
@@ -87,7 +87,8 @@ class MaxTracker(object):
 
 
 class NetMaxTracker(object):
-    def __init__(self, layers = default_layers, is_conv = default_is_conv, n_top = 10, initial_val = -1e99, dtype = 'float32'):
+    def __init__(self, layers=default_layers, is_conv=default_is_conv, n_top=10,
+                 initial_val=-1e99, dtype='float32'):
         self.layers = layers
         self.is_conv = is_conv
         self.init_done = False
@@ -125,33 +126,37 @@ def load_file_list(filelist):
     return image_filenames, image_labels
 
 
+def scan_images_for_maxes(net, n_top, images_df=None, images_dir=None, filelist_path=None,
+                          layers=default_layers, is_conv_layer=default_is_conv):
+    if images_df is None:
+        image_filenames, image_labels = load_file_list(filelist_path)
+        image_pathes = [os.path.join(images_dir, p) for p in image_filenames]
+    else:
+        image_pathes = images_df['path'].values
+        image_labels = images_df['label'].values
 
-def scan_images_for_maxes(net, datadir, filelist, n_top):
-    image_filenames, image_labels = load_file_list(filelist)
-    print 'Scanning %d files' % len(image_filenames)
-    print '  First file', os.path.join(datadir, image_filenames[0])
+    print 'Scanning %d files' % len(image_pathes)
+    print '  First file', image_pathes[0]
 
-    tracker = NetMaxTracker(n_top = n_top)
-    for image_idx in xrange(len(image_filenames)):
-        filename = image_filenames[image_idx]
+    tracker = NetMaxTracker(n_top = n_top, layers=layers, is_conv=is_conv_layer)
+    for image_idx in xrange(len(image_pathes)):
+        img_path = image_pathes[image_idx]
         image_class = image_labels[image_idx]
-        #im = caffe.io.load_image('../../data/ilsvrc12/mini_ilsvrc_valid/sized/ILSVRC2012_val_00000610.JPEG')
         do_print = (image_idx % 100 == 0)
         if do_print:
-            print '%s   Image %d/%d' % (datetime.now().ctime(), image_idx, len(image_filenames))
-        with WithTimer('Load image', quiet = not do_print):
-            im = caffe.io.load_image(os.path.join(datadir, filename))
-        with WithTimer('Predict   ', quiet = not do_print):
-            net.predict([im], oversample = False)   # Just take center crop
-        with WithTimer('Update    ', quiet = not do_print):
+            print '%s   Image %d/%d' % (datetime.now().ctime(), image_idx, len(image_pathes))
+        with WithTimer('Load image', quiet=(not do_print)):
+            im = caffe.io.load_image(img_path)
+        with WithTimer('Predict   ', quiet=(not do_print)):
+            net.predict([im], oversample=False)   # Just take center crop
+        with WithTimer('Update    ', quiet=(not do_print)):
             tracker.update(net, image_idx, image_class)
 
     print 'done!'
     return tracker
 
 
-
-def save_representations(net, datadir, filelist, layer, first_N = None):
+def save_representations(net, layer, first_N = None, datadir=None, filelist=None,):
     image_filenames, image_labels = load_file_list(filelist)
     if first_N is None:
         first_N = len(image_filenames)
@@ -198,17 +203,22 @@ def get_max_data_extent(net, layer, rc, is_conv):
         return net.blobs['data'].data.shape[2:4]        # e.g. (227,227) for fc6,fc7,fc8,prop
 
 
-
-def output_max_patches(max_tracker, net, layer, idx_begin, idx_end, num_top, datadir, filelist, outdir, do_which):
+def output_max_patches(max_tracker, net, layer, idx_begin, idx_end, num_top,
+                       outdir, do_which, images_dir=None, filelist_path=None, images_df=None):
     do_maxes, do_deconv, do_deconv_norm, do_backprop, do_backprop_norm, do_info = do_which
     assert do_maxes or do_deconv or do_deconv_norm or do_backprop or do_backprop_norm or do_info, 'nothing to do'
 
     mt = max_tracker
     rc = RegionComputer()
-    
-    image_filenames, image_labels = load_file_list(filelist)
-    print 'Loaded filenames and labels for %d files' % len(image_filenames)
-    print '  First file', os.path.join(datadir, image_filenames[0])
+    if images_df is None:
+        image_filenames, image_labels = load_file_list(filelist_path)
+        image_pathes = [os.path.join(images_dir, p) for p in image_filenames]
+    else:
+        image_pathes = images_df['path'].values
+        image_labels = images_df['label'].values
+
+    print 'Loaded filenames and labels for %d files' % len(image_pathes)
+    print '  First file', image_pathes[0]
 
     num_top_in_mt = mt.max_locs.shape[1]
     assert num_top <= num_top_in_mt, 'Requested %d top images but MaxTracker contains only %d' % (num_top, num_top_in_mt)
@@ -235,7 +245,7 @@ def output_max_patches(max_tracker, net, layer, idx_begin, idx_end, num_top, dat
             else:
                 im_idx, im_class = mt.max_locs[channel_idx, max_idx]
             recorded_val = mt.max_vals[channel_idx, max_idx]
-            filename = image_filenames[im_idx]
+            img_path = image_pathes[im_idx]
             do_print = (max_idx_0 == 0)
             if do_print:
                 print '%s   Output file/image(s) %d/%d' % (datetime.now().ctime(), cc * num_top, n_total_images)
@@ -277,21 +287,21 @@ def output_max_patches(max_tracker, net, layer, idx_begin, idx_end, num_top, dat
                     print >>info_file, '%d %d %d %d' % tuple(mt.max_locs[channel_idx, max_idx]),
                 else:
                     print >>info_file, '%d %d' % tuple(mt.max_locs[channel_idx, max_idx]),
-                print >>info_file, filename
+                print >>info_file, img_path
 
             if not (do_maxes or do_deconv or do_deconv_norm or do_backprop or do_backprop_norm):
                 continue
 
 
             with WithTimer('Load image', quiet = not do_print):
-                im = caffe.io.load_image(os.path.join(datadir, filename))
+                im = caffe.io.load_image(img_path)
             with WithTimer('Predict   ', quiet = not do_print):
-                net.predict([im], oversample = False)   # Just take center crop, same as in scan_images_for_maxes
+                net.predict([im], oversample=False)   # Just take center crop, same as in scan_images_for_maxes
 
             if len(net.blobs[layer].data.shape) == 4:
-                reproduced_val = net.blobs[layer].data[0,channel_idx,ii,jj]
+                reproduced_val = net.blobs[layer].data[0, channel_idx, ii, jj]
             else:
-                reproduced_val = net.blobs[layer].data[0,channel_idx]
+                reproduced_val = net.blobs[layer].data[0, channel_idx]
             if abs(reproduced_val - recorded_val) > .1:
                 print 'Warning: recorded value %s is suspiciously different from reproduced value %s. Is the filelist the same?' % (recorded_val, reproduced_val)
 
@@ -302,8 +312,8 @@ def output_max_patches(max_tracker, net, layer, idx_begin, idx_end, num_top, dat
                 with WithTimer('Save img  ', quiet = not do_print):
                     save_caffe_image(out_arr, os.path.join(unit_dir, 'maxim_%03d.png' % max_idx_0),
                                      autoscale = False, autoscale_center = 0)
-                
-            if do_deconv or do_deconv_norm:
+
+            if (do_deconv or do_deconv_norm) and len(net.blobs[layer].data.shape) == 4:
                 diffs = net.blobs[layer].diff * 0
                 if len(diffs.shape) == 4:
                     diffs[0,channel_idx,ii,jj] = 1.0
@@ -325,9 +335,9 @@ def output_max_patches(max_tracker, net, layer, idx_begin, idx_end, num_top, dat
                     with WithTimer('Save img  ', quiet = not do_print):
                         save_caffe_image(out_arr, os.path.join(unit_dir, 'deconvnorm_%03d.png' % max_idx_0))
 
-            if do_backprop or do_backprop_norm:
+            if (do_backprop or do_backprop_norm) and len(net.blobs[layer].data.shape) == 4:
                 diffs = net.blobs[layer].diff * 0
-                diffs[0,channel_idx,ii,jj] = 1.0
+                diffs[0, channel_idx, ii, jj] = 1.0
                 with WithTimer('Backward  ', quiet = not do_print):
                     net.backward_from_layer(layer, diffs)
 

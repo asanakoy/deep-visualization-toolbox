@@ -1,12 +1,12 @@
 #! /usr/bin/env python
 
+import os
 from pylab import *
 
 # Make sure that caffe is on the python path:
-caffe_root = '../../'  # this file is expected to be in {caffe_root}/experiments/something
-import sys
-loadpath = caffe_root + 'python_cpu'
-print '= = = CAFFE LOADER: LOADING CPU VERSION from path: %s = = =' % loadpath
+import settings
+loadpath = os.path.join(settings.caffevis_caffe_root, 'python')
+print '= = = CAFFE LOADER: LOADING from path: %s = = =\n' % loadpath
 sys.path.insert(0, loadpath)     # Use CPU compiled code for backprop vis/etc
 import caffe
 caffe.set_mode_cpu()
@@ -41,3 +41,15 @@ def load_imagenet_mean():
     imagenet_mean = np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy')
     imagenet_mean = imagenet_mean[:, 14:14+227, 14:14+227]    # (3,256,256) -> (3,227,227) Crop to center 227x227 section
     return imagenet_mean
+
+
+def load_rgb_hwc_mean_and_convert(mean_path):
+    """
+    1. Load mean that stored as RGB and HxWxC
+    2. Convert it to BGR and CxWxH for caffe usage
+    """
+    data_mean = np.load(mean_path)
+    assert data_mean.shape[2] == 3, '3-rd dimensions must be color channels!'
+    data_mean = data_mean[:, :, ::-1]  # change RGB to BGR
+    data_mean = data_mean.transpose((2, 0, 1))  # height*width*channel -> channel*height*width
+    return data_mean
